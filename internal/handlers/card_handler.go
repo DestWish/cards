@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/DestWish/cards/internal/models"
 	"github.com/DestWish/cards/internal/service"
@@ -20,6 +21,8 @@ func (h *CardHandler) RegisterRoutes(r *gin.Engine) {
 	cards := r.Group("/api/cards")
 	{
 		cards.POST("", h.Create)
+		cards.GET("", h.GetAll)
+		cards.PUT("", h.Update)
 	}
 }
 
@@ -37,6 +40,19 @@ func (h *CardHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, card)
 }
 
+func (h *CardHandler) GetAll(c *gin.Context) {
+	 uid, ok := parseUserId(c)
+	 if !ok {
+		return
+	 }
+
+	 cards, err := h.service.GetAllCards(uid)
+	 if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	 }
+	 c.JSON(http.StatusOK, cards)
+}
+
 func (h *CardHandler) Update(c *gin.Context) {
 	var req models.UpdateCardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -49,7 +65,19 @@ func (h *CardHandler) Update(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusAccepted, card)
-
 }
+
+
+
+func parseUserId(c *gin.Context) (uint, bool) {
+	id, err := strconv.ParseUint(c.Param("user_id"), 10, 32)
+	if err != nil{
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+		return 0, false
+	}
+	return uint(id), true
+}
+
+
 
 
